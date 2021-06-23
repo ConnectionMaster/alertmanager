@@ -23,17 +23,18 @@ require (
 	github.com/oklog/ulid v1.3.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.10.0
-	github.com/prometheus/common v0.21.0
+	github.com/prometheus/common v0.24.0
 	github.com/prometheus/exporter-toolkit v0.5.1
 	github.com/rs/cors v1.7.0
 	github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749
 	github.com/shurcooL/vfsgen v0.0.0-20200824052919-0d455de96546
 	github.com/stretchr/testify v1.7.0
 	github.com/xlab/treeprint v1.1.0
+	go.uber.org/atomic v1.5.0
 	golang.org/x/net v0.0.0-20210421230115-4e50805a0758
 	golang.org/x/tools v0.1.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-go 1.14
+go 1.16

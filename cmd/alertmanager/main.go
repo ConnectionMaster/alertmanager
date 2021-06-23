@@ -321,7 +321,7 @@ func run() int {
 		go peer.Settle(ctx, *gossipInterval*10)
 	}
 
-	alerts, err := mem.NewAlerts(context.Background(), marker, *alertGCInterval, logger)
+	alerts, err := mem.NewAlerts(context.Background(), marker, *alertGCInterval, nil, logger)
 	if err != nil {
 		level.Error(logger).Log("err", err)
 		return 1
@@ -335,11 +335,19 @@ func run() int {
 		return disp.Groups(routeFilter, alertFilter)
 	}
 
+	// An interface value that holds a nil concrete value is non-nil.
+	// Therefore we explicly pass an empty interface, to detect if the
+	// cluster is not enabled in notify.
+	var clusterPeer cluster.ClusterPeer
+	if peer != nil {
+		clusterPeer = peer
+	}
+
 	api, err := api.New(api.Options{
 		Alerts:      alerts,
 		Silences:    silences,
 		StatusFunc:  marker.Status,
-		Peer:        peer,
+		Peer:        clusterPeer,
 		Timeout:     *httpTimeout,
 		Concurrency: *getConcurrency,
 		Logger:      log.With(logger, "component", "api"),
@@ -375,7 +383,7 @@ func run() int {
 		tmpl      *template.Template
 	)
 
-	dispMetrics := dispatch.NewDispatcherMetrics(prometheus.DefaultRegisterer)
+	dispMetrics := dispatch.NewDispatcherMetrics(false, prometheus.DefaultRegisterer)
 	pipelineBuilder := notify.NewPipelineBuilder(prometheus.DefaultRegisterer)
 	configLogger := log.With(logger, "component", "configuration")
 	configCoordinator := config.NewCoordinator(
@@ -426,6 +434,15 @@ func run() int {
 
 		inhibitor = inhibit.NewInhibitor(alerts, conf.InhibitRules, marker, logger)
 		silencer := silence.NewSilencer(silences, marker, logger)
+
+		// An interface value that holds a nil concrete value is non-nil.
+		// Therefore we explicly pass an empty interface, to detect if the
+		// cluster is not enabled in notify.
+		var pipelinePeer notify.Peer
+		if peer != nil {
+			pipelinePeer = peer
+		}
+
 		pipeline := pipelineBuilder.New(
 			receivers,
 			waitFunc,
@@ -433,7 +450,7 @@ func run() int {
 			silencer,
 			muteTimes,
 			notificationLog,
-			peer,
+			pipelinePeer,
 		)
 		configuredReceivers.Set(float64(len(activeReceivers)))
 		configuredIntegrations.Set(float64(integrationsNum))
@@ -443,7 +460,7 @@ func run() int {
 			silencer.Mutes(labels)
 		})
 
-		disp = dispatch.NewDispatcher(alerts, routes, pipeline, marker, timeoutFunc, logger, dispMetrics)
+		disp = dispatch.NewDispatcher(alerts, routes, pipeline, marker, timeoutFunc, nil, logger, dispMetrics)
 		routes.Walk(func(r *dispatch.Route) {
 			if r.RouteOpts.RepeatInterval > *retention {
 				level.Warn(configLogger).Log(

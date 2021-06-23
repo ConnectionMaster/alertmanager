@@ -50,7 +50,7 @@ Generic placeholders are defined as follows:
 
 The other placeholders are specified separately.
 
-A provided [valid example file](https://github.com/prometheus/alertmanager/blob/master/doc/examples/simple.yml)
+A provided [valid example file](https://github.com/prometheus/alertmanager/blob/main/doc/examples/simple.yml)
 shows usage in context.
 
 The global configuration specifies parameters that are valid in all other
@@ -211,15 +211,15 @@ route:
   # are dispatched to the database pager.
   - receiver: 'database-pager'
     group_wait: 10s
-    match_re:
-      service: mysql|cassandra
+    matchers:
+    - service=~"mysql|cassandra"
   # All alerts with the team=frontend label match this sub-route.
   # They are grouped by product and environment rather than cluster
   # and alertname.
   - receiver: 'frontend-pager'
     group_by: [product, environment]
-    match:
-      team: frontend
+    matchers:
+    - team="frontend"
 ```
 
 ## `<mute_time_interval>`
@@ -264,7 +264,7 @@ immediately before 24:00. They are specified like so:
         - start_time: HH:MM
           end_time: HH:MM
 
-`weeekday_range`: A list of days of the week, where the week begins on Sunday and ends on Saturday.
+`weekday_range`: A list of days of the week, where the week begins on Sunday and ends on Saturday.
 Days should be specified by name (e.g. ‘Sunday’). For convenience, ranges are also accepted
 of the form <start_day>:<end_day> and are inclusive on both ends. For example:
 `[‘monday:wednesday','saturday', 'sunday']`
@@ -326,7 +326,7 @@ source_match_re:
 # A list of matchers for which one or more alerts have 
 # to exist for the inhibition to take effect.
 source_matchers:
-   [ - <matcher> ... ]
+  [ - <matcher> ... ]
 
 # Labels that must have an equal value in the source and target
 # alert for the inhibition to take effect.
@@ -360,6 +360,11 @@ authorization:
   # It is mutually exclusive with `credentials`.
   [ credentials_file: <filename> ]
 
+# Optional OAuth 2.0 configuration.
+# Cannot be used at the same time as basic_auth or authorization.
+oauth2:
+  [ <oauth2> ]
+
 # Optional proxy URL.
 [ proxy_url: <string> ]
 
@@ -369,6 +374,32 @@ authorization:
 # Configures the TLS settings.
 tls_config:
   [ <tls_config> ]
+```
+
+### `oauth2`
+
+OAuth 2.0 authentication using the client credentials grant type.
+Alertmanager fetches an access token from the specified endpoint with
+the given client access and secret keys.
+
+```yaml
+client_id: <string>
+[ client_secret: <secret> ]
+
+# Read the client secret from a file.
+# It is mutually exclusive with `client_secret`.
+[ client_secret_file: <filename> ]
+
+# Scopes for the token request.
+scopes:
+  [ - <string> ... ]
+
+# The URL to fetch the token from.
+token_url: <string>
+
+# Optional parameters to append to the token URL.
+endpoint_params:
+  [ <string>: <string> ... ]
 ```
 
 ## `<tls_config>`
@@ -395,7 +426,7 @@ A `tls_config` allows configuring TLS connections.
 
 Receiver is a named configuration of one or more notification integrations.
 
-__We're not actively adding new receivers, we recommend implementing custom notification integrations via the [webhook](#webhook_config) receiver.__
+Note: As part of lifting the past moratorium on new receivers it was agreed that, in addition to the existing requirements, new notification integrations will be required to have a committed maintainer with push access.
 
 ```yaml
 # The unique name of the receiver.
@@ -552,6 +583,8 @@ Pushover notifications are sent via the [Pushover API](https://pushover.net/api)
 user_key: <secret>
 
 # Your registered application’s API token, see https://pushover.net/apps
+# You can also register a token by cloning this Prometheus app:
+# https://pushover.net/apps/clone/prometheus
 token: <secret>
 
 # Notification title.
@@ -674,12 +707,12 @@ The 3rd token may be the empty string. Within the 3rd token, OpenMetrics escapin
 
 In the configuration, multiple matchers are combined in a YAML list. However, it is also possible to combine multiple matchers within a single YAML string, again using syntax inspired by PromQL. In such a string, a leading `{` and/or a trailing `}` is optional and will be trimmed before further parsing. Individual matchers are separated by commas outside of quoted parts of the string. Those commas may be surrounded by whitespace. Parts of the string inside unescaped double quotes `"…"` are considered quoted (and commas don't act as separators there). If double quotes are escaped with a single backslash `\`, they are ignored for the purpose of identifying quoted parts of the input string. If the input string, after trimming the optional trailing `}`, ends with a comma, followed by optional whitespace, this comma and whitespace will be trimmed.
 
-Here are some examples of valid string matchers :
+Here are some examples of valid string matchers:
 
 1. Shown below are two equality matchers combined in a long form YAML list.
 
 ```yaml
-  matchers :
+  matchers:
    - foo = bar
    - dings !=bums 
 ```
